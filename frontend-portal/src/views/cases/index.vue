@@ -283,9 +283,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import type { CaseItem, ConsultationForm } from '@/types'
 
+const route = useRoute()
 const loading = ref(false)
 const detailVisible = ref(false)
 const submitting = ref(false)
@@ -611,6 +613,14 @@ onMounted(() => {
   loading.value = true
   setTimeout(() => {
     loading.value = false
+    // 支持从客户评价专区跳转过来时直接打开对应项目背景
+    const caseId = Number(route.query.caseId)
+    if (caseId) {
+      const target = cases.value.find(c => c.id === caseId)
+      if (target) {
+        showCaseDetail(target)
+      }
+    }
   }, 500)
 })
 </script>

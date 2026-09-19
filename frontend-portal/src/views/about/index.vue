@@ -24,6 +24,10 @@
             我们相信，技术的价值在于解决实际问题。因此，我们不断探索前沿技术，
             将其转化为切实可行的解决方案，为客户创造真正的商业价值。
           </p>
+          <p class="intro-cooperation">
+            截至目前，我们已交付 <strong>{{ testimonials.length }}</strong> 个合作项目并收到客户的真实评价，
+            你可以在下方的<a href="#testimonials" @click.prevent="scrollToTestimonials">客户评价专区</a>逐条查看。
+          </p>
           <div class="intro-stats">
             <div class="stat">
               <span class="stat-value">6+</span>
@@ -102,6 +106,256 @@
       </div>
     </section>
 
+    <!-- 客户评价 -->
+    <section id="testimonials" ref="testimonialsSectionRef" class="testimonials-section">
+      <div class="testimonials-container">
+        <div class="section-header">
+          <span class="section-header__badge">
+            <el-icon><ChatLineSquare /></el-icon> 客户评价
+          </span>
+          <h2 class="section-header__title">来自合作伙伴的真实反馈</h2>
+          <p class="section-header__desc">评价按项目类型集中展示，点击任意卡片可查看项目背景与团队成员</p>
+        </div>
+
+        <template v-if="testimonials.length > 0">
+          <!-- 评分概览 -->
+          <div class="rating-overview">
+            <div class="overview-score">
+              <template v-if="ratedTestimonials.length > 0">
+                <span class="score-value">{{ averageRating.toFixed(1) }}</span>
+                <div class="score-detail">
+                  <el-rate :model-value="averageRating" disabled />
+                  <span class="score-label">平均分 · 共 {{ ratedTestimonials.length }} 条已评分</span>
+                </div>
+              </template>
+              <template v-else>
+                <span class="score-value">--</span>
+                <span class="score-total">暂无已评分评价，平均分待统计</span>
+              </template>
+            </div>
+            <el-alert
+              v-if="pendingTestimonials.length > 0"
+              class="overview-note"
+              type="warning"
+              :closable="false"
+              show-icon
+            >
+              <template #title>
+                另有 {{ pendingTestimonials.length }} 条评价评分缺失，已单独归入「待补充」，
+                暂不计入平均分。
+              </template>
+            </el-alert>
+          </div>
+
+          <!-- 按评分查看 -->
+          <div class="filter-bar">
+            <span class="filter-label">
+              <el-icon><Filter /></el-icon>
+              按评分查看：
+            </span>
+            <div class="filter-tabs">
+              <button
+                v-for="opt in ratingFilters"
+                :key="opt.value"
+                class="filter-tab"
+                :class="{ active: activeRatingFilter === opt.value }"
+                @click="activeRatingFilter = opt.value"
+              >
+                {{ opt.label }}
+                <span class="tab-count">{{ opt.count }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 项目类型分组 -->
+          <template v-if="visibleGroups.length > 0">
+            <div v-for="group in visibleGroups" :key="group.key" class="testimonial-group">
+              <div class="group-header">
+                <el-icon><CollectionTag /></el-icon>
+                <h3>{{ group.label }}</h3>
+                <span class="group-count">{{ group.items.length }} 条</span>
+              </div>
+
+              <div v-if="group.key !== 'pending'" class="testimonial-grid">
+                <div
+                  v-for="item in group.items"
+                  :key="item.id"
+                  class="testimonial-card"
+                  @click="showTestimonialDetail(item)"
+                >
+                  <div class="card-top">
+                    <span class="card-industry">
+                      <el-icon><OfficeBuilding /></el-icon>
+                      {{ item.industry }}
+                    </span>
+                    <el-rate :model-value="item.rating ?? 0" disabled size="small" />
+                  </div>
+                  <p class="card-quote">“{{ item.content }}”</p>
+                  <div class="card-footer">
+                    <div class="card-meta">
+                      <span class="meta-client">{{ item.client }}</span>
+                      <span class="meta-team">
+                        <el-icon><UserFilled /></el-icon>
+                        {{ item.team }}
+                      </span>
+                    </div>
+                    <el-button text type="primary" size="small">
+                      查看项目背景<el-icon><ArrowRight /></el-icon>
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 待补充评分 -->
+              <div v-else class="testimonial-grid">
+                <div
+                  v-for="item in group.items"
+                  :key="item.id"
+                  class="testimonial-card is-pending"
+                  @click="showTestimonialDetail(item)"
+                >
+                  <div class="card-top">
+                    <span class="card-industry">
+                      <el-icon><OfficeBuilding /></el-icon>
+                      {{ item.industry }}
+                    </span>
+                    <span class="rating-pending">
+                      <el-icon><WarningFilled /></el-icon>
+                      待补充
+                    </span>
+                  </div>
+                  <p class="card-quote">“{{ item.content }}”</p>
+                  <el-alert
+                    class="pending-reason"
+                    type="warning"
+                    :closable="false"
+                    :title="item.pendingReason"
+                    show-icon
+                  />
+                  <div class="card-footer">
+                    <div class="card-meta">
+                      <span class="meta-client">{{ item.client }}</span>
+                      <span class="meta-team">
+                        <el-icon><UserFilled /></el-icon>
+                        {{ item.team }}
+                      </span>
+                    </div>
+                    <el-button text type="primary" size="small">
+                      查看项目背景<el-icon><ArrowRight /></el-icon>
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <el-empty
+            v-else
+            class="filter-empty"
+            :description="`暂无${currentFilterLabel}的评价`"
+          />
+        </template>
+
+        <!-- 一条评价都没有 -->
+        <el-empty v-else class="no-testimonial" description="还没有客户评价">
+          <template #image>
+            <el-icon class="no-testimonial__icon"><ChatLineSquare /></el-icon>
+          </template>
+          <p class="no-testimonial__tip">
+            评价专区暂时为空。您可以从已完成项目里邀请客户填写评价，评价经审核后将在这里按项目类型集中展示。
+          </p>
+          <el-button type="primary" round @click="goToCases">
+            <el-icon><Promotion /></el-icon>
+            前往已完成项目邀请评价
+          </el-button>
+        </el-empty>
+      </div>
+    </section>
+
+    <!-- 评价详情：项目背景与团队成员 -->
+    <el-dialog
+      v-model="detailVisible"
+      :title="currentTestimonial?.projectName"
+      width="720px"
+      class="testimonial-dialog"
+      destroy-on-close
+    >
+      <div v-if="currentTestimonial" class="detail-body">
+        <div class="detail-meta">
+          <span class="meta-badge">
+            <el-icon><OfficeBuilding /></el-icon>
+            {{ currentTestimonial.industry }}
+          </span>
+          <span class="meta-badge">
+            <el-icon><CollectionTag /></el-icon>
+            {{ currentTestimonial.projectType }}
+          </span>
+          <span class="meta-badge">
+            <el-icon><UserFilled /></el-icon>
+            {{ currentTestimonial.team }}
+          </span>
+        </div>
+
+        <div class="detail-rating">
+          <template v-if="currentTestimonial.rating !== null">
+            <el-rate :model-value="currentTestimonial.rating" disabled />
+            <span class="rating-score">{{ currentTestimonial.rating }}.0 分</span>
+          </template>
+          <el-alert
+            v-else
+            type="warning"
+            :closable="false"
+            show-icon
+            title="评分待补充，暂不计入平均分"
+            :description="currentTestimonial.pendingReason"
+          />
+        </div>
+
+        <div class="detail-block">
+          <h4>
+            <el-icon><ChatLineSquare /></el-icon>
+            评价原文
+          </h4>
+          <p class="detail-quote">“{{ currentTestimonial.content }}”</p>
+          <p class="detail-author">—— {{ currentTestimonial.client }}（{{ currentTestimonial.clientTitle }}）</p>
+        </div>
+
+        <div class="detail-block">
+          <h4>
+            <el-icon><Notebook /></el-icon>
+            项目背景
+            <el-button
+              v-if="currentTestimonial.caseId"
+              class="case-link"
+              text
+              type="primary"
+              size="small"
+              @click="goToCase(currentTestimonial.caseId)"
+            >
+              查看完整项目案例<el-icon><TopRight /></el-icon>
+            </el-button>
+          </h4>
+          <p class="detail-text">{{ currentTestimonial.background }}</p>
+        </div>
+
+        <div class="detail-block">
+          <h4>
+            <el-icon><Avatar /></el-icon>
+            团队成员（{{ resolveMembers(currentTestimonial).length }} 人）
+          </h4>
+          <div class="member-list">
+            <div v-for="member in resolveMembers(currentTestimonial)" :key="member.name" class="member-item">
+              <img :src="member.avatar" :alt="member.name" />
+              <div class="member-info">
+                <span class="member-name">{{ member.name }}</span>
+                <span class="member-role">{{ member.role }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+
     <!-- 团队介绍 -->
     <section class="team-section">
       <div class="section-header">
@@ -156,12 +410,114 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onActivated, onDeactivated, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import {
+  testimonials,
+  memberPool,
+  PROJECT_TYPE_ORDER,
+  type Testimonial,
+  type TestimonialMember
+} from '@/data/testimonials'
+
+// keep-alive 缓存时使用固定名称，确保从项目案例返回后仍停在原位置
+defineOptions({ name: 'AboutPage' })
+
+const router = useRouter()
 
 const handleNotImplemented = () => {
   ElMessage.info('功能开发中，敬请期待')
 }
+
+// ==================== 客户评价 ====================
+const activeRatingFilter = ref<'all' | number | 'pending'>('all')
+const detailVisible = ref(false)
+const currentTestimonial = ref<Testimonial | null>(null)
+
+const ratedTestimonials = computed(() => testimonials.filter(t => t.rating !== null))
+const pendingTestimonials = computed(() => testimonials.filter(t => t.rating === null))
+
+const averageRating = computed(() => {
+  if (ratedTestimonials.value.length === 0) return 0
+  const total = ratedTestimonials.value.reduce((sum, t) => sum + (t.rating ?? 0), 0)
+  return total / ratedTestimonials.value.length
+})
+
+const ratingFilters = computed(() => [
+  { label: '全部', value: 'all' as const, count: testimonials.length },
+  { label: '5 分', value: 5, count: testimonials.filter(t => t.rating === 5).length },
+  { label: '4 分', value: 4, count: testimonials.filter(t => t.rating === 4).length },
+  { label: '待补充', value: 'pending' as const, count: pendingTestimonials.value.length }
+])
+
+const currentFilterLabel = computed(() => {
+  if (activeRatingFilter.value === 'all') return ''
+  if (activeRatingFilter.value === 'pending') return '待补充评分'
+  return `${activeRatingFilter.value} 分`
+})
+
+const matchFilter = (item: Testimonial) => {
+  if (activeRatingFilter.value === 'all') return true
+  if (activeRatingFilter.value === 'pending') return item.rating === null
+  return item.rating === activeRatingFilter.value
+}
+
+// 待补充评价单独成组，并说明原因（分组依据：项目类型）
+const visibleGroups = computed(() => {
+  const groups = PROJECT_TYPE_ORDER.map(type => ({
+    key: type,
+    label: type,
+    items: testimonials.filter(t => t.projectType === type && matchFilter(t))
+  }))
+    .filter(g => g.items.length > 0)
+
+  const pendingItems = pendingTestimonials.value.filter(matchFilter)
+  if (pendingItems.length > 0) {
+    groups.push({ key: 'pending', label: '待补充评分', items: pendingItems })
+  }
+  return groups
+})
+
+const resolveMembers = (item: Testimonial): TestimonialMember[] =>
+  item.memberIds.map(id => memberPool[id]).filter(Boolean)
+
+const showTestimonialDetail = (item: Testimonial) => {
+  currentTestimonial.value = item
+  detailVisible.value = true
+}
+
+const goToCase = (caseId: number) => {
+  detailVisible.value = false
+  router.push({ path: '/cases', query: { caseId: String(caseId) } })
+}
+
+const goToCases = () => {
+  router.push('/cases')
+}
+
+const testimonialsSectionRef = ref<HTMLElement | null>(null)
+const scrollToTestimonials = () => {
+  testimonialsSectionRef.value?.scrollIntoView({ behavior: 'smooth' })
+}
+
+// 从专区点进项目背景再回来时，仍停在原来的位置
+let savedScrollTop = 0
+let hasSavedPosition = false
+
+onDeactivated(() => {
+  savedScrollTop = window.scrollY
+  hasSavedPosition = true
+  detailVisible.value = false
+})
+
+onActivated(() => {
+  if (hasSavedPosition) {
+    nextTick(() => {
+      window.scrollTo({ top: savedScrollTop, behavior: 'auto' })
+    })
+  }
+})
 
 const timeline = ref([
   { year: '2018', title: '公司成立', description: '怀揣梦想，在北京正式成立，开启创业之旅' },
@@ -281,6 +637,24 @@ const teamMembers = ref([
     color: $text-color-secondary;
     line-height: $line-height-loose;
     margin-bottom: $spacing-md;
+  }
+
+  .intro-cooperation {
+    strong {
+      color: $primary-color;
+      font-size: $font-size-lg;
+      font-weight: 800;
+    }
+
+    a {
+      color: $primary-color;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
   }
 }
 
@@ -486,6 +860,472 @@ const teamMembers = ref([
   }
 }
 
+// ==================== 客户评价 ====================
+.testimonials-section {
+  padding: $spacing-4xl $spacing-lg;
+  background: $bg-color-light;
+}
+
+.testimonials-container {
+  max-width: $container-max-width;
+  margin: 0 auto;
+}
+
+.testimonials-section .section-header {
+  text-align: center;
+  margin-bottom: $spacing-3xl;
+
+  .section-header__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    background: rgba($primary-color, 0.1);
+    color: $primary-color;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    border-radius: $border-radius-full;
+    margin-bottom: $spacing-md;
+
+    .el-icon {
+      font-size: 16px;
+    }
+  }
+
+  .section-header__title {
+    font-size: clamp(28px, 4vw, $font-size-3xl);
+    font-weight: 700;
+    margin-bottom: $spacing-sm;
+  }
+
+  .section-header__desc {
+    font-size: $font-size-md;
+    color: $text-color-secondary;
+  }
+}
+
+.rating-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-lg;
+  flex-wrap: wrap;
+  background: white;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg $spacing-xl;
+  margin-bottom: $spacing-lg;
+  box-shadow: $shadow-sm;
+
+  .overview-score {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+
+    .score-value {
+      font-size: $font-size-4xl;
+      font-weight: 800;
+      background: $gradient-text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+
+    .score-total {
+      font-size: $font-size-sm;
+      color: $text-color-secondary;
+    }
+
+    .score-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .score-label {
+        font-size: $font-size-xs;
+        color: $text-color-secondary;
+      }
+    }
+
+    :deep(.el-rate__text) {
+      color: $text-color-secondary;
+    }
+  }
+
+  .overview-note {
+    flex: 1;
+    min-width: 280px;
+  }
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-xl;
+
+  .filter-label {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: $text-color-regular;
+
+    .el-icon {
+      color: $primary-color;
+    }
+  }
+
+  .filter-tabs {
+    display: flex;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  .filter-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 6px $spacing-lg;
+    font-size: $font-size-sm;
+    color: $text-color-secondary;
+    background: white;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-full;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    .tab-count {
+      padding: 1px 8px;
+      background: $bg-color-light;
+      border-radius: $border-radius-full;
+      font-size: $font-size-xs;
+    }
+
+    &:hover {
+      color: $primary-color;
+      border-color: $primary-color;
+    }
+
+    &.active {
+      color: white;
+      background: $gradient-primary;
+      border-color: transparent;
+
+      .tab-count {
+        background: rgba(255, 255, 255, 0.25);
+      }
+    }
+  }
+}
+
+.testimonial-group {
+  margin-bottom: $spacing-3xl;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+
+  .el-icon {
+    color: $primary-color;
+    font-size: $font-size-xl;
+  }
+
+  h3 {
+    font-size: $font-size-xl;
+    font-weight: 700;
+  }
+
+  .group-count {
+    padding: 2px 10px;
+    background: rgba($primary-color, 0.1);
+    color: $primary-color;
+    font-size: $font-size-xs;
+    border-radius: $border-radius-full;
+  }
+}
+
+.testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-lg;
+}
+
+.testimonial-card {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid $border-color-light;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg;
+  cursor: pointer;
+  transition: all $transition-normal;
+
+  &:hover {
+    box-shadow: $shadow-xl;
+    transform: translateY(-4px);
+  }
+
+  &.is-pending {
+    border-style: dashed;
+    border-color: rgba($warning-color, 0.4);
+    background: rgba($warning-color, 0.03);
+
+    &:hover {
+      border-color: $warning-color;
+    }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  .card-industry {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba($primary-color, 0.1);
+    color: $primary-color;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    border-radius: $border-radius-full;
+  }
+
+  .rating-pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba($warning-color, 0.12);
+    color: $warning-color;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    border-radius: $border-radius-full;
+  }
+
+  .card-quote {
+    flex: 1;
+    font-size: $font-size-sm;
+    color: $text-color-regular;
+    line-height: $line-height-loose;
+    margin-bottom: $spacing-md;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .pending-reason {
+    margin-bottom: $spacing-md;
+    align-items: flex-start;
+
+    :deep(.el-alert__title) {
+      font-size: $font-size-xs;
+      line-height: 1.6;
+    }
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    padding-top: $spacing-md;
+    border-top: 1px dashed $border-color-light;
+
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .meta-client {
+      font-size: $font-size-sm;
+      font-weight: 600;
+      color: $text-color-primary;
+    }
+
+    .meta-team {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: $font-size-xs;
+      color: $text-color-secondary;
+    }
+  }
+}
+
+.filter-empty,
+.no-testimonial {
+  padding: $spacing-3xl 0;
+}
+
+.no-testimonial {
+  background: white;
+  border-radius: $border-radius-lg;
+  max-width: 640px;
+  margin: 0 auto;
+
+  &__icon {
+    font-size: 64px;
+    color: $text-color-placeholder;
+  }
+
+  &__tip {
+    font-size: $font-size-sm;
+    color: $text-color-secondary;
+    line-height: $line-height-loose;
+    max-width: 420px;
+    margin: -$spacing-md auto $spacing-lg;
+  }
+}
+
+// 评价详情弹窗
+.testimonial-dialog {
+  :deep(.el-dialog__body) {
+    padding-top: $spacing-md;
+  }
+
+  .detail-body {
+    .detail-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: $spacing-sm;
+      margin-bottom: $spacing-lg;
+
+      .meta-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        background: $bg-color-light;
+        color: $text-color-regular;
+        font-size: $font-size-xs;
+        border-radius: $border-radius-full;
+      }
+    }
+
+    .detail-rating {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+      margin-bottom: $spacing-xl;
+
+      .rating-score {
+        font-size: $font-size-md;
+        font-weight: 700;
+        color: $warning-color;
+      }
+
+      :deep(.el-alert) {
+        flex: 1;
+      }
+    }
+
+    .detail-block {
+      margin-bottom: $spacing-xl;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      h4 {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        font-size: $font-size-md;
+        font-weight: 700;
+        margin-bottom: $spacing-md;
+
+        .el-icon {
+          color: $primary-color;
+        }
+
+        .case-link {
+          margin-left: $spacing-sm;
+        }
+      }
+
+      .detail-quote {
+        font-size: $font-size-md;
+        color: $text-color-regular;
+        line-height: $line-height-loose;
+        padding: $spacing-md $spacing-lg;
+        background: $bg-color-light;
+        border-left: 3px solid $primary-color;
+        border-radius: $border-radius-sm;
+        margin-bottom: $spacing-sm;
+      }
+
+      .detail-author {
+        font-size: $font-size-sm;
+        color: $text-color-secondary;
+        text-align: right;
+      }
+
+      .detail-text {
+        font-size: $font-size-sm;
+        color: $text-color-regular;
+        line-height: $line-height-loose;
+      }
+    }
+
+    .member-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: $spacing-md;
+    }
+
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      padding: $spacing-sm;
+      background: $bg-color-light;
+      border-radius: $border-radius-md;
+
+      img {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+      }
+
+      .member-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .member-name {
+        font-size: $font-size-sm;
+        font-weight: 600;
+      }
+
+      .member-role {
+        font-size: $font-size-xs;
+        color: $text-color-secondary;
+      }
+    }
+  }
+}
+
 // ==================== 团队介绍 ====================
 .team-section {
   padding: $spacing-4xl $spacing-lg;
@@ -626,19 +1466,31 @@ const teamMembers = ref([
     grid-template-columns: 1fr;
     gap: $spacing-xl;
   }
-  
+
   .intro-image {
     order: -1;
   }
-  
+
   .mission-container {
     grid-template-columns: 1fr;
-    
+
     .mission-card.featured {
       transform: none;
-      
+
       &:hover {
         transform: translateY(-4px);
+      }
+    }
+  }
+
+  .testimonial-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .testimonial-dialog {
+    .detail-body {
+      .member-list {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
   }
@@ -671,9 +1523,26 @@ const teamMembers = ref([
   .office-gallery {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
-    
+
     .gallery-item.large {
       grid-row: auto;
+    }
+  }
+
+  .testimonial-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rating-overview {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .testimonial-dialog {
+    .detail-body {
+      .member-list {
+        grid-template-columns: 1fr;
+      }
     }
   }
 }
