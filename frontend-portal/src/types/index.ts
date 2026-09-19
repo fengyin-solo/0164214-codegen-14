@@ -82,6 +82,46 @@ export interface ConsultationForm {
   requirement: string
 }
 
+// ==================== 客户评价相关 ====================
+// 评价团队成员
+export interface ReviewMember {
+  id: string
+  name: string
+  role: string
+  avatar: string
+}
+
+// 评价关联的项目背景
+export interface ReviewProject {
+  name: string
+  industry: string
+  serviceType: string
+  client: string
+  duration: string
+  background: string
+  memberIds: string[]
+}
+
+// 客户评价
+export interface ReviewItem {
+  id: number
+  author: string
+  title: string
+  company: string
+  industry: string
+  team: string
+  // 评分：1-5；为 null 表示暂时缺失，归入「待补充」且不计入平均分
+  rating: number | null
+  // 评分缺失的原因说明
+  missingRatingReason?: string
+  content: string
+  date: string
+  project: ReviewProject
+}
+
+// 评分筛选取值：'all' 全部 | 1-5 按星查看 | 'pending' 待补充
+export type RatingFilterValue = 'all' | 'pending' | number
+
 // ==================== 导航菜单 ====================
 export interface NavItem {
   name: string

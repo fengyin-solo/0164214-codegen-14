@@ -14,6 +14,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '关于我们' }
   },
   {
+    path: '/about/reviews/:id',
+    name: 'ReviewDetail',
+    component: () => import('@/views/about/review-detail.vue'),
+    meta: { title: '客户评价详情' }
+  },
+  {
     path: '/news',
     name: 'News',
     component: () => import('@/views/news/index.vue'),
@@ -54,9 +60,17 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(_to, _from, savedPosition) {
+  scrollBehavior(to, _from, savedPosition) {
+    // 浏览器前进/后退时恢复到原位置（如从评价详情返回专区）
     if (savedPosition) {
       return savedPosition
+    }
+    if (to.hash) {
+      return {
+        el: to.hash,
+        behavior: 'smooth',
+        top: 80
+      }
     }
     return { top: 0 }
   }
